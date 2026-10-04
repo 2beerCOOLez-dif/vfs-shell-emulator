@@ -1,0 +1,40 @@
+{
+  "vfs_name": "my_vfs",
+  "root": {
+    "type": "dir",
+    "children": {
+      "home": {
+        "type": "dir",
+        "children": {
+          "user": {
+            "type": "dir",
+            "children": {
+              "docs": {
+                "type": "dir",
+                "children": {
+                  "report.txt": {
+                    "type": "file",
+                    "content": "cmVwb3J0"
+                  }
+                }
+              },
+              "todo.txt": {
+                "type": "file",
+                "content": "dG9kbw=="
+              }
+            }
+          }
+        }
+      },
+      "etc": {
+        "type": "dir",
+        "children": {
+          "config.cfg": {
+            "type": "file",
+            "content": "Y29uZmln"
+          }
+        }
+      }
+    }
+  }
+}

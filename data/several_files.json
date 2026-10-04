@@ -1,0 +1,29 @@
+{
+  "vfs_name": "my_vfs",
+  "root": {
+    "type": "dir",
+    "children": {
+      "readme.txt": {
+        "type": "file",
+        "content": "aGVsbG8gd29ybGQ="
+      },
+      "notes.txt": {
+        "type": "file",
+        "content": "bXkgbm90ZXM="
+      },
+      "logo.bin": {
+        "type": "file",
+        "content": "AQIDBA=="
+      },
+      "docs": {
+        "type": "dir",
+        "children": {
+          "guide.txt": {
+            "type": "file",
+            "content": "Z3VpZGU="
+          }
+        }
+      }
+    }
+  }
+}

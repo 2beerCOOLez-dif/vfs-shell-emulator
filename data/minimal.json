@@ -1,0 +1,12 @@
+{
+  "vfs_name": "my_vfs",
+  "root": {
+    "type": "dir",
+    "children": {
+      "readme.txt": {
+        "type": "file",
+        "content": "aGVsbG8gd29ybGQ="
+      }
+    }
+  }
+}
