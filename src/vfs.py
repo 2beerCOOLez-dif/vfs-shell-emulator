@@ -10,8 +10,13 @@ CHILDREN_KEY = "children"
 CONTENT_KEY = "content"
 NAME_KEY = "vfs_name"
 ROOT_KEY = "root"
+USER_KEY = "user"
 DEFAULT_NAME = "my_vfs"
+DEFAULT_USER = "guest"
 TREE_INDENT = "    "
+ROOT_PREFIX = "/"
+CURRENT_DIR = "."
+PARENT_DIR = ".."
 
 
 class VfsError(Exception):
@@ -31,7 +36,11 @@ class VirtualFileSystem:
             VfsError: Если структура VFS некорректна.
         """
         self._name = str(data.get(NAME_KEY, DEFAULT_NAME))
-        self._root = data.get(ROOT_KEY, {})
+        self._user = str(data.get(USER_KEY, DEFAULT_USER))
+        root = data.get(ROOT_KEY, {})
+        if not root:
+            root = {TYPE_KEY: DIR_TYPE, CHILDREN_KEY: {}}
+        self._root = root
         _validate_node(self._root, "/")
 
     @classmethod
@@ -60,6 +69,11 @@ class VirtualFileSystem:
     def name(self) -> str:
         """Возвращает имя виртуальной файловой системы."""
         return self._name
+
+    @property
+    def user(self) -> str:
+        """Возвращает имя пользователя виртуальной системы."""
+        return self._user
 
     def get_node(self, parts: list[str]) -> dict | None:
         """Возвращает узел по пути или None, если путь не найден.
@@ -90,6 +104,23 @@ class VirtualFileSystem:
         _render_node(self._root, "", lines)
         return "\n".join(lines)
 
+    def subtree_size(self, parts: list[str]) -> int | None:
+        """Возвращает размер поддерева в байтах или None.
+
+        Аргументы:
+            parts: Список компонентов пути от корня.
+
+        Возвращает:
+            Размер файла или суммы файлов каталога либо None.
+
+        Исключения:
+            VfsError: Если base64-содержимое файла некорректно.
+        """
+        node = self.get_node(parts)
+        if node is None:
+            return None
+        return _node_size(node)
+
     def decode_content(self, parts: list[str]) -> str:
         """Декодирует base64-содержимое файла в строку в памяти.
 
@@ -109,6 +140,34 @@ class VirtualFileSystem:
             return base64.b64decode(node[CONTENT_KEY]).decode()
         except (ValueError, UnicodeDecodeError) as error:
             raise VfsError(f"Invalid base64: {error}") from error
+
+
+def resolve_path(raw: str, cwd: list[str]) -> list[str]:
+    """Преобразует строку пути в список компонентов.
+
+    Поддерживает абсолютные пути, начинающиеся с '/', и
+    относительные пути с элементами '.' и '..'.
+
+    Аргументы:
+        raw: Строка пути.
+        cwd: Компоненты текущего каталога.
+
+    Возвращает:
+        Список компонентов пути без служебных элементов.
+    """
+    if raw.startswith(ROOT_PREFIX):
+        parts: list[str] = []
+    else:
+        parts = list(cwd)
+    for token in raw.split(ROOT_PREFIX):
+        if token in ("", CURRENT_DIR):
+            continue
+        if token == PARENT_DIR:
+            if parts:
+                parts.pop()
+            continue
+        parts.append(token)
+    return parts
 
 
 def _validate_node(node: dict, path: str) -> None:
@@ -149,6 +208,29 @@ def _count_nodes(node: dict) -> int:
     total = 1
     for child in node.get(CHILDREN_KEY, {}).values():
         total += _count_nodes(child)
+    return total
+
+
+def _node_size(node: dict) -> int:
+    """Вычисляет размер поддерева узла в байтах.
+
+    Аргументы:
+        node: Словарь узла для вычисления размера.
+
+    Возвращает:
+        Размер файла или сумма размеров детей для каталога.
+
+    Исключения:
+        VfsError: Если base64-содержимое файла некорректно.
+    """
+    if node.get(TYPE_KEY) == FILE_TYPE:
+        try:
+            return len(base64.b64decode(node.get(CONTENT_KEY, "")))
+        except ValueError as error:
+            raise VfsError(f"Invalid base64: {error}") from error
+    total = 0
+    for child in node.get(CHILDREN_KEY, {}).values():
+        total += _node_size(child)
     return total
 
 

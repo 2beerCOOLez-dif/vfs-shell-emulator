@@ -2,45 +2,113 @@
 from src.commands import (
     VFS_NOT_LOADED_MESSAGE,
     dispatch_command,
-    execute_tree,
 )
+from src.shell import Shell
 from src.vfs import VirtualFileSystem
 
 SMALL_DATA = {
     "vfs_name": "TestVFS",
+    "user": "tester",
     "root": {
         "type": "dir",
         "children": {
             "a.txt": {"type": "file", "content": "aGk="},
+            "sub": {
+                "type": "dir",
+                "children": {
+                    "b.txt": {"type": "file", "content": "aGk="},
+                },
+            },
         },
     },
 }
 
 
-def test_execute_tree_without_vfs():
-    """Проверяет сообщение при незагруженной VFS."""
-    assert execute_tree(None) == VFS_NOT_LOADED_MESSAGE
+def _make_shell() -> Shell:
+    """Создаёт сессию с загруженной тестовой VFS.
+
+    Возвращает:
+        Объект Shell с загруженной виртуальной системой.
+    """
+    return Shell(VirtualFileSystem(SMALL_DATA))
 
 
-def test_execute_tree_with_vfs():
-    """Проверяет вывод дерева при загруженной VFS."""
-    vfs = VirtualFileSystem(SMALL_DATA)
-    assert "a.txt" in execute_tree(vfs)
+def test_ls_lists_children():
+    """Проверяет вывод содержимого корневого каталога."""
+    result = dispatch_command("ls", [], _make_shell())
+    assert result == "a.txt\nsub"
 
 
-def test_dispatch_known_commands():
-    """Проверяет маршрутизацию известных команд."""
-    assert dispatch_command("ls", [], None).startswith("ls called")
-    assert dispatch_command("cd", ["x"], None).startswith("cd called")
+def test_ls_missing_path():
+    """Проверяет ошибку ls для несуществующего пути."""
+    result = dispatch_command("ls", ["nope"], _make_shell())
+    assert result == "Error: no such path: nope"
+
+
+def test_ls_on_file_prints_name():
+    """Проверяет, что ls для файла печатает его имя."""
+    result = dispatch_command("ls", ["a.txt"], _make_shell())
+    assert result == "a.txt"
+
+
+def test_ls_without_vfs():
+    """Проверяет сообщение ls при незагруженной VFS."""
+    result = dispatch_command("ls", [], Shell())
+    assert result == VFS_NOT_LOADED_MESSAGE
+
+
+def test_cd_changes_cwd_and_pwd():
+    """Проверяет смену каталога и вывод pwd."""
+    shell = _make_shell()
+    assert dispatch_command("cd", ["sub"], shell) == ""
+    assert dispatch_command("pwd", [], shell) == "/sub"
+
+
+def test_cd_missing_path():
+    """Проверяет ошибку cd для несуществующего пути."""
+    result = dispatch_command("cd", ["nope"], _make_shell())
+    assert result == "Error: no such path: nope"
+
+
+def test_cd_not_a_directory():
+    """Проверяет ошибку cd при переходе в файл."""
+    result = dispatch_command("cd", ["a.txt"], _make_shell())
+    assert result == "Error: not a directory: a.txt"
+
+
+def test_cd_without_args_returns_root():
+    """Проверяет возврат cd без аргументов в корень."""
+    shell = _make_shell()
+    dispatch_command("cd", ["sub"], shell)
+    dispatch_command("cd", [], shell)
+    assert dispatch_command("pwd", [], shell) == "/"
+
+
+def test_du_subtree_size():
+    """Проверяет вычисление размера поддерева."""
+    shell = _make_shell()
+    assert dispatch_command("du", [], shell) == "4 bytes /"
+    assert dispatch_command("du", ["sub"], shell) == "2 bytes sub"
+
+
+def test_du_missing_path():
+    """Проверяет ошибку du для несуществующего пути."""
+    result = dispatch_command("du", ["nope"], _make_shell())
+    assert result == "Error: no such path: nope"
+
+
+def test_du_without_vfs():
+    """Проверяет сообщение du при незагруженной VFS."""
+    result = dispatch_command("du", [], Shell())
+    assert result == VFS_NOT_LOADED_MESSAGE
+
+
+def test_whoami_returns_user():
+    """Проверяет вывод имени пользователя из VFS."""
+    assert dispatch_command("whoami", [], _make_shell()) == "tester"
 
 
 def test_dispatch_unknown_command():
     """Проверяет сообщение об неизвестной команде."""
-    result = dispatch_command("boom", [], None)
+    result = dispatch_command("boom", [], Shell())
     assert result == "Error: unknown command 'boom'"
-
-
-def test_dispatch_tree_command():
-    """Проверяет маршрутизацию команды tree."""
-    vfs = VirtualFileSystem(SMALL_DATA)
-    assert "a.txt" in dispatch_command("tree", [], vfs)

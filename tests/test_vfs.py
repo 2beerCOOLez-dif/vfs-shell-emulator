@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from src.vfs import VfsError, VirtualFileSystem
-
+from src.vfs import VfsError, VirtualFileSystem, resolve_path
 MINIMAL_DATA = {
     "vfs_name": "TestVFS",
+    "user": "tester",
     "root": {
         "type": "dir",
         "children": {
@@ -99,3 +99,24 @@ def test_decode_content_missing_file():
     vfs = VirtualFileSystem(MINIMAL_DATA)
     with pytest.raises(VfsError):
         vfs.decode_content(["nope"])
+
+
+def test_resolve_absolute_and_relative():
+    """Проверяет преобразование строк пути в компоненты."""
+    assert resolve_path("/home/user", []) == ["home", "user"]
+    assert resolve_path("docs", ["home"]) == ["home", "docs"]
+    assert resolve_path("../etc", ["home", "user"]) == ["home", "etc"]
+
+
+def test_subtree_size():
+    """Проверяет вычисление размера поддерева."""
+    vfs = VirtualFileSystem(MINIMAL_DATA)
+    assert vfs.subtree_size([]) == 4
+    assert vfs.subtree_size(["sub"]) == 2
+    assert vfs.subtree_size(["nope"]) is None
+
+
+def test_user_property():
+    """Проверяет чтение имени пользователя из данных."""
+    assert VirtualFileSystem(MINIMAL_DATA).user == "tester"
+    assert VirtualFileSystem({}).user == "guest"

@@ -1,5 +1,6 @@
 {
   "vfs_name": "my_vfs",
+  "user": "ded",
   "root": {
     "type": "dir",
     "children": {

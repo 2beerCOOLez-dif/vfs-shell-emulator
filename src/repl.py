@@ -1,15 +1,10 @@
 """Модуль интерактивного цикла REPL эмулятора оболочки."""
-from src.commands import (
-    DEFAULT_VFS_NAME,
-    EXIT_COMMAND,
-    GOODBYE_MESSAGE,
-    dispatch_command,
-)
+from src.commands import EXIT_COMMAND, GOODBYE_MESSAGE, dispatch_command
 from src.parser import parse_input
-from src.vfs import VirtualFileSystem
+from src.shell import Shell
 
 
-def run_repl(vfs: VirtualFileSystem | None = None) -> None:
+def run_repl(shell: Shell | None = None) -> None:
     """Запускает интерактивный цикл REPL эмулятора.
 
     Цикл читает команды пользователя, направляет их обработчику
@@ -17,9 +12,11 @@ def run_repl(vfs: VirtualFileSystem | None = None) -> None:
     сочетанию клавиш прерывания ввода.
 
     Аргументы:
-        vfs: Загруженная в память виртуальная система или None.
+        shell: Сессия эмулятора или None для пустой сессии.
     """
-    name = vfs.name if vfs is not None else DEFAULT_VFS_NAME
+    if shell is None:
+        shell = Shell()
+    name = shell.prompt_name
     print(f"Welcome to {name} emulator!")
     print("Type 'exit' to quit.\n")
 
@@ -37,4 +34,6 @@ def run_repl(vfs: VirtualFileSystem | None = None) -> None:
         if command == EXIT_COMMAND:
             print(GOODBYE_MESSAGE)
             break
-        print(dispatch_command(command, args, vfs))
+        result = dispatch_command(command, args, shell)
+        if result:
+            print(result)

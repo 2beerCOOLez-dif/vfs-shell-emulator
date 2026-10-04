@@ -5,6 +5,7 @@ from pathlib import Path
 from src.config import AppConfig, parse_args
 from src.repl import run_repl
 from src.script_runner import run_script
+from src.shell import Shell
 from src.vfs import VfsError, VirtualFileSystem
 
 EXIT_ERROR_CODE = 1
@@ -14,11 +15,12 @@ def main() -> None:
     """Запускает эмулятор в режиме скрипта или интерактивном режиме."""
     config = parse_args()
     vfs = load_vfs_or_exit(config.vfs_path)
-    print_debug_info(config, vfs)
+    shell = Shell(vfs)
+    print_debug_info(config, shell)
     if config.script_path is not None:
-        run_script_or_exit(config.script_path, vfs)
+        run_script_or_exit(config.script_path, shell)
         return
-    run_repl(vfs)
+    run_repl(shell)
 
 
 def load_vfs_or_exit(path: Path | None) -> VirtualFileSystem | None:
@@ -39,36 +41,31 @@ def load_vfs_or_exit(path: Path | None) -> VirtualFileSystem | None:
         sys.exit(EXIT_ERROR_CODE)
 
 
-def print_debug_info(
-    config: AppConfig,
-    vfs: VirtualFileSystem | None,
-) -> None:
+def print_debug_info(config: AppConfig, shell: Shell) -> None:
     """Выводит отладочную информацию о параметрах запуска.
 
     Аргументы:
         config: Разобранные параметры командной строки.
-        vfs: Загруженная виртуальная файловая система или None.
+        shell: Сессия эмулятора с загруженной VFS или пустая.
     """
     print("VFS Shell Emulator")
     print(f"VFS path: {config.vfs_path}")
     print(f"Script path: {config.script_path}")
-    if vfs is not None:
-        print(f"VFS name: {vfs.name}")
-        print(f"VFS nodes: {vfs.count_nodes()}")
+    if shell.vfs is not None:
+        print(f"VFS name: {shell.vfs.name}")
+        print(f"VFS nodes: {shell.vfs.count_nodes()}")
+        print(f"VFS user: {shell.vfs.user}")
 
 
-def run_script_or_exit(
-    script_path: Path,
-    vfs: VirtualFileSystem | None,
-) -> None:
+def run_script_or_exit(script_path: Path, shell: Shell) -> None:
     """Выполняет стартовый скрипт, завершая программу при ошибке.
 
     Аргументы:
         script_path: Путь к файлу стартового скрипта.
-        vfs: Загруженная виртуальная файловая система или None.
+        shell: Сессия эмулятора с загруженной VFS.
     """
     try:
-        run_script(script_path, vfs)
+        run_script(script_path, shell)
     except FileNotFoundError as error:
         print(f"Error: {error}", file=sys.stderr)
         sys.exit(EXIT_ERROR_CODE)
