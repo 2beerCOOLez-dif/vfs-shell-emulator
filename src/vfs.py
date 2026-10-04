@@ -121,6 +121,24 @@ class VirtualFileSystem:
             return None
         return _node_size(node)
 
+    def set_node(self, parts: list[str], node: dict) -> bool:
+        """Вставляет или заменяет узел по пути только в памяти.
+
+        Аргументы:
+            parts: Список компонентов пути от корня.
+            node: Словарь узла для вставки.
+
+        Возвращает:
+            True при успехе, False если родитель не найден.
+        """
+        if not parts:
+            return False
+        parent = self.get_node(parts[:-1])
+        if parent is None or parent.get(TYPE_KEY) != DIR_TYPE:
+            return False
+        parent.setdefault(CHILDREN_KEY, {})[parts[-1]] = node
+        return True
+
     def decode_content(self, parts: list[str]) -> str:
         """Декодирует base64-содержимое файла в строку в памяти.
 
@@ -168,6 +186,26 @@ def resolve_path(raw: str, cwd: list[str]) -> list[str]:
             continue
         parts.append(token)
     return parts
+
+
+def copy_node(node: dict) -> dict:
+    """Создаёт глубокую копию узла VFS в памяти.
+
+    Аргументы:
+        node: Словарь узла для копирования.
+
+    Возвращает:
+        Новый узел с рекурсивно скопированными детьми.
+    """
+    result = {TYPE_KEY: node.get(TYPE_KEY)}
+    if node.get(TYPE_KEY) == DIR_TYPE:
+        children = {}
+        for name, child in node.get(CHILDREN_KEY, {}).items():
+            children[name] = copy_node(child)
+        result[CHILDREN_KEY] = children
+    else:
+        result[CONTENT_KEY] = node.get(CONTENT_KEY, "")
+    return result
 
 
 def _validate_node(node: dict, path: str) -> None:

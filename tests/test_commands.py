@@ -112,3 +112,49 @@ def test_dispatch_unknown_command():
     """Проверяет сообщение об неизвестной команде."""
     result = dispatch_command("boom", [], Shell())
     assert result == "Error: unknown command 'boom'"
+
+
+def test_cp_file_to_new_name():
+    """Проверяет копирование файла под новым именем."""
+    shell = _make_shell()
+    assert dispatch_command("cp", ["a.txt", "copy.txt"], shell) == ""
+    assert "copy.txt" in dispatch_command("ls", [], shell)
+    assert dispatch_command("du", [], shell) == "6 bytes /"
+
+
+def test_cp_file_into_dir():
+    """Проверяет копирование файла внутрь каталога."""
+    shell = _make_shell()
+    assert dispatch_command("cp", ["a.txt", "sub"], shell) == ""
+    assert "a.txt" in dispatch_command("ls", ["sub"], shell)
+
+
+def test_cp_dir_recursive():
+    """Проверяет рекурсивное копирование каталога."""
+    shell = _make_shell()
+    assert dispatch_command("cp", ["sub", "copy"], shell) == ""
+    assert "b.txt" in dispatch_command("ls", ["copy"], shell)
+
+
+def test_cp_missing_source():
+    """Проверяет ошибку cp при отсутствии источника."""
+    result = dispatch_command("cp", ["nope", "x"], _make_shell())
+    assert result == "Error: no such path: nope"
+
+
+def test_cp_wrong_args_count():
+    """Проверяет подсказку использования cp при одном аргументе."""
+    result = dispatch_command("cp", ["a.txt"], _make_shell())
+    assert result == "Usage: cp <source> <destination>"
+
+
+def test_cp_dir_into_itself():
+    """Проверяет запрет копирования каталога в самого себя."""
+    result = dispatch_command("cp", ["sub", "sub"], _make_shell())
+    assert result == "Error: cannot copy directory into itself: sub"
+
+
+def test_cp_without_vfs():
+    """Проверяет сообщение cp при незагруженной VFS."""
+    result = dispatch_command("cp", ["a", "b"], Shell())
+    assert result == VFS_NOT_LOADED_MESSAGE

@@ -1,10 +1,16 @@
 """Тесты для модуля виртуальной файловой системы."""
 import json
 from pathlib import Path
+from src.vfs import (
+    CHILDREN_KEY,
+    VfsError,
+    VirtualFileSystem,
+    copy_node,
+    resolve_path,
+)
 
 import pytest
 
-from src.vfs import VfsError, VirtualFileSystem, resolve_path
 MINIMAL_DATA = {
     "vfs_name": "TestVFS",
     "user": "tester",
@@ -120,3 +126,21 @@ def test_user_property():
     """Проверяет чтение имени пользователя из данных."""
     assert VirtualFileSystem(MINIMAL_DATA).user == "tester"
     assert VirtualFileSystem({}).user == "guest"
+
+
+def test_set_node_inserts_copy():
+    """Проверяет вставку узла по указанному пути."""
+    vfs = VirtualFileSystem(MINIMAL_DATA)
+    node = copy_node(vfs.get_node(["a.txt"]))
+    assert vfs.set_node(["sub", "copy.txt"], node)
+    assert vfs.get_node(["sub", "copy.txt"]) is not None
+    assert not vfs.set_node(["nope", "x.txt"], node)
+
+
+def test_copy_node_independence():
+    """Проверяет независимость копии от исходного узла."""
+    vfs = VirtualFileSystem(MINIMAL_DATA)
+    original = vfs.get_node(["sub"])
+    copied = copy_node(original)
+    copied[CHILDREN_KEY]["new.txt"] = {"type": "file", "content": ""}
+    assert "new.txt" not in original[CHILDREN_KEY]
