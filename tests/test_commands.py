@@ -5,6 +5,28 @@ from src.commands import (
 )
 from src.shell import Shell
 from src.vfs import VirtualFileSystem
+import base64
+import copy
+
+from src.vfs import (
+    CHILDREN_KEY,
+    CONTENT_KEY,
+    FILE_TYPE,
+    ROOT_KEY,
+    TYPE_KEY,
+)
+
+HIDDEN_FILE_NAME = ".hidden"
+EMPTY_CONTENT_B64 = ""
+TEST_DIR_SUB = "sub"
+BIG_FILE_NAME = "big.bin"
+BIG_FILE_SIZE = 2048
+BIG_FILE_BYTES = b"x"
+EXPECTED_LONG_FILE_LINE = "- 2B a.txt"
+EXPECTED_LONG_DIR_LINE = "d 2B sub/"
+EXPECTED_LONG_HIDDEN_LINE = "- 0B .hidden"
+EXPECTED_LONG_SUB_FILE = "- 2B b.txt"
+EXPECTED_HUMAN_LINE = "2.0K big.bin"
 
 SMALL_DATA = {
     "vfs_name": "TestVFS",
@@ -12,6 +34,10 @@ SMALL_DATA = {
     "root": {
         "type": "dir",
         "children": {
+            HIDDEN_FILE_NAME: {
+                "type": "file",
+                "content": EMPTY_CONTENT_B64,
+            },
             "a.txt": {"type": "file", "content": "aGk="},
             "sub": {
                 "type": "dir",
@@ -112,3 +138,60 @@ def test_dispatch_unknown_command():
     """Проверяет сообщение об неизвестной команде."""
     result = dispatch_command("boom", [], Shell())
     assert result == "Error: unknown command 'boom'"
+
+
+def _make_shell_with_big_file() -> Shell:
+    """Создаёт сессию с файлом размером 2 КиБ.
+
+    Возвращает:
+        Объект Shell с VFS, содержащей большой файл.
+    """
+    data = copy.deepcopy(SMALL_DATA)
+    content = base64.b64encode(
+        BIG_FILE_BYTES * BIG_FILE_SIZE
+    ).decode()
+    data[ROOT_KEY][CHILDREN_KEY][BIG_FILE_NAME] = {
+        TYPE_KEY: FILE_TYPE,
+        CONTENT_KEY: content,
+    }
+    return Shell(VirtualFileSystem(data))
+
+
+def test_ls_hides_dot_files_by_default():
+    """Проверяет, что скрытые файлы не видны без флага -a."""
+    result = dispatch_command("ls", [], _make_shell())
+    assert HIDDEN_FILE_NAME not in result
+
+
+def test_ls_flag_a_shows_dot_files():
+    """Проверяет показ скрытых файлов с флагом -a."""
+    result = dispatch_command("ls", ["-a"], _make_shell())
+    assert HIDDEN_FILE_NAME in result
+
+
+def test_ls_flag_l_long_format():
+    """Проверяет длинный формат вывода с флагом -l."""
+    result = dispatch_command("ls", ["-l"], _make_shell())
+    assert EXPECTED_LONG_FILE_LINE in result
+    assert EXPECTED_LONG_DIR_LINE in result
+
+
+def test_ls_flag_h_human_sizes():
+    """Проверяет человекочитаемые размеры с флагами -lh."""
+    shell = _make_shell_with_big_file()
+    result = dispatch_command("ls", ["-lh"], shell)
+    assert EXPECTED_HUMAN_LINE in result
+
+
+def test_ls_combined_flags_la():
+    """Проверяет сочетание флагов -l и -a."""
+    result = dispatch_command("ls", ["-la"], _make_shell())
+    assert EXPECTED_LONG_HIDDEN_LINE in result
+    assert EXPECTED_LONG_FILE_LINE in result
+
+
+def test_ls_flags_with_path():
+    """Проверяет флаги вместе с путём до каталога."""
+    shell = _make_shell()
+    result = dispatch_command("ls", ["-l", TEST_DIR_SUB], shell)
+    assert EXPECTED_LONG_SUB_FILE in result

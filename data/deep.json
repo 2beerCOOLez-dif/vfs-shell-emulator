@@ -22,6 +22,10 @@
               "todo.txt": {
                 "type": "file",
                 "content": "dG9kbw=="
+              },
+              ".profile": {
+                "type": "file",
+                "content": "cHJvZmlsZQ=="
               }
             }
           }
@@ -33,6 +37,10 @@
           "config.cfg": {
             "type": "file",
             "content": "Y29uZmln"
+          },
+          ".env": {
+            "type": "file",
+            "content": "ZW52"
           }
         }
       }

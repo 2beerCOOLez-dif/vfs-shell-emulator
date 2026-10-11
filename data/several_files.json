@@ -16,6 +16,10 @@
         "type": "file",
         "content": "AQIDBA=="
       },
+      ".hidden.txt": {
+        "type": "file",
+        "content": "aGlkZGVu"
+      },
       "docs": {
         "type": "dir",
         "children": {
