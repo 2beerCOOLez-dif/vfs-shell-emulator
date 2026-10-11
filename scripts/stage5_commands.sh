@@ -1,5 +1,7 @@
 # Стартовый скрипт этапа 5: все режимы команды cp
 ls
+ls -l
+ls -a
 cp etc/config.cfg etc/config.backup
 ls etc
 cp etc/config.cfg

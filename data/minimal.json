@@ -7,6 +7,10 @@
       "readme.txt": {
         "type": "file",
         "content": "aGVsbG8gd29ybGQ="
+      },
+      ".secret.txt": {
+        "type": "file",
+        "content": "c2VjcmV0"
       }
     }
   }
